@@ -56,7 +56,101 @@ def introduction():
     label5 = Label(introScreen, text = introTextLang)
     label5.pack()
 
-def btncmd():
+def translateAllScreen(event):
+    print("translateAllScreen started")
+    btn1["state"] = DISABLED
+    if platform.system() == 'Windows':
+        dir = os.path.join(os.path.expanduser('~'),'Desktop')
+        print("desktop :", dir)
+    elif platform.system() == 'Darwin':
+        dir = os.path.join(os.path.expanduser('~')+'/Desktop')
+        print("desktop :", dir)
+    else:
+        print('unsurpport os')
+        messagebox.showerror("warning", "Unsurpport os.")
+        btn1['state'] = NORMAL
+        return
+    
+    dx,dy=pyautogui.size()
+    im = pyautogui.screenshot(region=(0,0,dx,dy))
+
+        
+    #language = textBox.get(1.0, 'end-1c')                          #check box 만들면 intvar로 변경
+    language = langVar.get()
+
+
+    if language == "":
+        print("lang = x")
+        text = pytesseract.image_to_string(im)
+    else:
+        print("lang = {}".format(language))
+        try:
+            text = pytesseract.image_to_string(im, lang = language)
+        except pytesseract.pytesseract.TesseractError:
+            messagebox.showerror("warning", "Failed loading language \'{}\'".format(language))
+            btn1['state'] = NORMAL
+            return
+        
+    if text == "\u000c": #U+000c
+        messagebox.showerror("warning", "No characters detected\nerror-1")
+        btn1['state'] = NORMAL
+        return
+    
+    print("--------text--------\n" + text)
+    print("-"*20)
+    
+    translator = googletrans.Translator()
+    try:
+        tText = translator.translate(text, dest = 'ko') #mouse sleep == 0.01  ->  error
+    except IndexError:
+        print("googletranse error1")
+        print("\n"*3)
+        messagebox.showerror("warning", "No charactrs detected\nerror-2")
+        btn1['state'] = NORMAL
+        return
+    except TypeError:
+        print('googletranse error2')
+        print("\n"*3)
+        messagebox.showerror("warning", "No charactrs detected\nerror-3")
+        btn1['state'] = NORMAL
+        return
+    
+    resultText = tText.text
+    
+    now = datetime.now()
+    nowTime = now.strftime("%Y_%m_%d-%H%M%S")
+    if platform.system() == 'Windows':
+        fileName = dir + "\\" + "translated_text-" + nowTime
+    elif platform.system() == 'Darwin':
+        fileName = dir + "/translated_text-"+nowTime
+    else:
+        print("unsupport os")
+    
+    if saveImage.get() == 1:
+        print("save image")
+
+        if platform.system() == 'Windows':
+            im.save("{0}\\image-{1}.png".format(dir, nowTime))
+        elif platform.system() == 'Darwin':
+            im.save('{0}/image-{1}.png'.format(dir, nowTime))
+        #im.show()
+        else:
+            print("unsupport os")
+    
+    
+    memo = open("%s.txt" %fileName, "w", encoding = "utf-8")
+    memo.write("%s" %resultText)
+    memo.close()
+    messagebox.showinfo("complete", "complete")
+    btn1['state'] = NORMAL
+    print("finish")
+    return
+
+
+
+
+
+def btncmd(event):
     print("btncmd started")
     btn1["state"] = DISABLED
     while 1:
@@ -71,6 +165,7 @@ def btncmd():
             print("desktop :", dir)
         else:
             print('unsurpport os')
+            messagebox.showerror("warning", "Unsurpport os.")
             btn1['state'] = NORMAL
             break
         
@@ -144,14 +239,13 @@ def btncmd():
 
         else:
             print('unsurpport os')
+            messagebox.showerror("warning", "Unsurpport os.")
             btn1['state'] = NORMAL
             break
         
-        if platform.system() == 'Windows':
-            im = pyautogui.screenshot(region=(x, y, dx, dy))
-        if platform.system() == 'Darwin':
-            im = pyautogui.screenshot(region=[round(x),round(y),round(dx),round(dy)])
-            print(round(x),round(y),round(dx),round(dy))
+
+        im = pyautogui.screenshot(region=(x, y, dx, dy))
+
         
         #language = textBox.get(1.0, 'end-1c')                          #check box 만들면 intvar로 변경
         language = langVar.get()
@@ -320,8 +414,11 @@ radioBtn8.place(x=100,y=200-40)
 saveImage = IntVar()
 cBox = Checkbutton(screen, text = "Save image", variable = saveImage)
 cBox.place(x=0,y=230-20)
-btn1 = Button(screen, text = '번역 시작', command = btncmd)
+btn1 = Button(screen, text = '번역 시작')#, command = btncmd)
 btn1.place(x=0,y=250-20)
+btn1.bind("<Button-1>",btncmd)
+screen.bind("<Control-Shift-t>",translateAllScreen)
+screen.bind("<Control-Shift-T>",translateAllScreen)
 btn2 = Button(screen, text = '설정', command = setting)
 btn2.place(x=0,y=280-20)
 btn3 = Button(screen, text = '사용법 보기', command = introduction)
